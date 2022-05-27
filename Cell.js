@@ -30,9 +30,7 @@ export class Cell extends UI {
     this.element.classList.add("border--revealed");
   }
 
-  // createCell() {
-  //   const div = `<div class="cell border border--concave" data-x='${this.cols}' data-y = '${this.rows}' data-cells></div>`;
-
-  //   return div;
-  // }
+  addMine() {
+    this.isMine = true;
+  }
 }

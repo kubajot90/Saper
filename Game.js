@@ -1,5 +1,7 @@
 import { UI } from "./UI.js";
 import { Cell } from "./Cell.js";
+import { Counter } from "./Counter.js";
+import { Timer } from "./Timer.js";
 
 class Game extends UI {
   config = {
@@ -19,6 +21,11 @@ class Game extends UI {
       mines: 99,
     },
   };
+
+  counter = new Counter();
+  timer = new Timer();
+
+  isGameFinished = false;
   numberOfRows = null;
   numberOfCols = null;
   numberOfMines = null;
@@ -34,6 +41,8 @@ class Game extends UI {
 
   initializeGame() {
     this.handleElements();
+    this.counter.init();
+    this.timer.init();
     this.newGame();
   }
 
@@ -46,12 +55,25 @@ class Game extends UI {
     this.numberOfCols = cols;
     this.numberOfMines = mines;
 
+    this.counter.setValue(this.numberOfMines);
+    this.timer.startTimer();
+
     this.generateCells();
     this.renderBoard();
+    this.placeMinesInCells();
 
     this.cellsElements = this.getElements(this.UiSelectors.cell);
 
     this.addCellsEventListeners();
+  }
+
+  endGame(isWin) {
+    this.isGameFinished = true;
+    this.timer.stopTimer();
+
+    if (!isWin) {
+      this.revealMines();
+    }
   }
 
   handleElements() {
@@ -81,12 +103,30 @@ class Game extends UI {
     });
   }
 
+  placeMinesInCells() {
+    let minesToPlaces = this.numberOfMines;
+
+    while (minesToPlaces) {
+      const rowIndex = this.getRandomInteger(0, this.numberOfRows - 1);
+      const colIndex = this.getRandomInteger(0, this.numberOfCols - 1);
+
+      const cell = this.cells[rowIndex][colIndex];
+      const hasCellMine = cell.isMine;
+
+      if (!hasCellMine) {
+        cell.addMine();
+        minesToPlaces--;
+      }
+    }
+  }
+
   handleCellClick = (e) => {
     const target = e.target;
     const rowIndex = parseInt(target.getAttribute("data-y"), 10);
     const colIndex = parseInt(target.getAttribute("data-x"), 10);
 
-    this.cells[rowIndex][colIndex].revealCell();
+    const cell = this.cells[rowIndex][colIndex];
+    this.clickCell(cell);
   };
 
   handleCellContentMenu = (e) => {
@@ -98,11 +138,37 @@ class Game extends UI {
     const cell = this.cells[rowIndex][colIndex];
     if (cell.isRevealed) return;
 
-    cell.toggleFlag();
+    if (cell.isFlagged) {
+      this.counter.increment();
+      cell.toggleFlag();
+    }
+    if (!!this.counter.value) {
+      this.counter.decrement();
+      cell.toggleFlag();
+    }
   };
+
+  clickCell(cell) {
+    if (cell.isMine) {
+      this.endGame(false);
+    }
+
+    cell.revealCell();
+  }
+
+  revealMines() {
+    this.cells
+      .flat()
+      .filter(({ isMine }) => isMine)
+      .forEach((cell) => cell.revealCell());
+  }
 
   htmlElements() {
     this.gameBoard = this.getElement(this.UiSelectors.gameBoard);
+  }
+
+  getRandomInteger(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }
 
